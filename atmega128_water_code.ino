@@ -1856,10 +1856,10 @@ void setup()
 
 
   pinMode(T_SW_1, OUTPUT);
-  digitalWrite(T_SW_1, LOW);
+  digitalWrite(T_SW_1, HIGH);
   pinMode(
     T_SW_2, OUTPUT);
-  digitalWrite(T_SW_2, LOW);
+  digitalWrite(T_SW_2, HIGH);
   pinMode(BO_SW, OUTPUT);
   digitalWrite(BO_SW, LOW);
   pulseCount1 = 0;
@@ -2134,8 +2134,8 @@ void loop()//-------------------------------------------------------------------
         //delay(1000);
         current = millis();
         if (current >= interval)
-        { 
-          menu_1();
+        {
+          toggle();
           timer0_millis = 0;
         }
         //Timer1.attachInterrupt(timer_check);
@@ -2233,9 +2233,10 @@ void loop()//-------------------------------------------------------------------
             current = millis();
             if (current >= interval)
             {
-              menu_1();
+              toggle();
               timer0_millis = 0;
             }
+
             // Timer1.attachInterrupt(timer_check);
             //  timer1(TIMER1_PRESCALER_1024, 7812U, toggle);
             //sei();
@@ -2271,7 +2272,7 @@ void loop()//-------------------------------------------------------------------
       current = millis();
       if (current >= interval)
       {
-        menu_1();
+        toggle();
         timer0_millis = 0;
       }
       //   Timer1.attachInterrupt(timer_check);
@@ -2304,7 +2305,7 @@ void device_menu() //-----------------------------------------------DEVICE ID CR
       lcd.clear();
       lcd_check1 = 0;
       serial_menu_flag = 0;
-     // wdt_enable(WDTO_8S);
+      // wdt_enable(WDTO_8S);
       //  Timer1.detachInterrupt();
       goto last;
     }
@@ -2967,7 +2968,7 @@ first_d :
     {
 
       menu_on_off_1 = 1; lcd.clear();
-      digitalWrite(T_SW_1, HIGH);
+      digitalWrite(T_SW_1, LOW);
       delay(150);
       lcd.begin(20, 4);
       lcd.clear();
@@ -2992,7 +2993,7 @@ first_d :
     {
 
       menu_on_off_2 = 1;
-      digitalWrite(T_SW_2, HIGH);
+      digitalWrite(T_SW_2, LOW);
       delay(150);
       lcd.begin(20, 4);
       lcd.clear();
@@ -3112,7 +3113,7 @@ void pulseCounter1()
     {
       if ((pulseCount1 >= total_min1) && (pulseCount1 <= total_max1)) // Only process counters once per second
       {
-        digitalWrite(T_SW_1, LOW);
+        digitalWrite(T_SW_1, HIGH);
         delay(2000);
         flag_int1 = 0;
         pulseCount1 = 0;
@@ -3134,7 +3135,7 @@ void pulseCounter2()
     {
       if ((pulseCount2 >= total_min2) && (pulseCount2 <= total_max2)) // Only process counters once per second
       {
-        digitalWrite(T_SW_2, LOW);
+        digitalWrite(T_SW_2, HIGH);
         flag_int2 = 0;
         pulseCount2 = 0;
         menu_on_off_2 = 0;
