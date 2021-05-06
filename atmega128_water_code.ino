@@ -9,13 +9,11 @@
 #include <avr/wdt.h>
 #include <avr/io.h>
 #include<avr/interrupt.h>
-
-
 #define sensorPin1 4//2
 #define sensorPin2 5//3
 #define sensorPin3 6
 #define sensorPin4 7
-
+void(* resetFunc) (void) = 0;
 /*
   #define down      9//67   //8
   #define enter    11 // 69   //11  #define up       8 //66   //9
@@ -74,7 +72,7 @@ byte buffer2[9] = {0, 0, 0, 0, 0, 0, 0, 22, 91};
 byte buffer4[9] = {0, 0, 0, 0, 0, 0, 0, 11, 11};
 
 unsigned int serial_num = 0;
-const unsigned long interval = 5000;
+const unsigned long interval = 50000;
 extern volatile unsigned long timer0_millis;
 unsigned prev = 0;
 unsigned long current = 0;
@@ -512,21 +510,21 @@ byte my_RFID_card()
       //           reg_amt=0;
 
       B_amt = amt_o;
-      /*unsigned long int  amt_swp1 = 0, amt_ltr1 = 0;
-        amt_swp = 0; amt_ltr = 0;
-        amt_swp = EEPROMReadlong(125);
-        amt_ltr = EEPROMReadlong(129);
+      unsigned long int  amt_swp1 = 0, amt_ltr1 = 0;
+      amt_swp = 0; amt_ltr = 0;
+      amt_swp = EEPROMReadlong(125);
+      amt_ltr = EEPROMReadlong(129);
 
-        amt_swp1 = EEPROMReadlong(105);
-        amt_ltr1 = EEPROMReadlong(109);
-      */
+      amt_swp1 = EEPROMReadlong(105);
+      amt_ltr1 = EEPROMReadlong(109);
+
       amt_o = amt_o - EEPROM.read(36 + ((key_r - 1) * 7));
-      /*amt_swp = amt_swp + EEPROM.read(36 + ((key_r - 1) * 7));
-        amt_ltr = amt_ltr + EEPROM.read(30 + ((key_r - 1) * 7));
+      amt_swp = amt_swp + EEPROM.read(36 + ((key_r - 1) * 7));
+      amt_ltr = amt_ltr + EEPROM.read(30 + ((key_r - 1) * 7));
 
-        amt_swp1 = amt_swp1 + EEPROM.read(36 + ((key_r - 1) * 7));
-        amt_ltr1 = amt_ltr1 + EEPROM.read(30 + ((key_r - 1) * 7));
-      */
+      amt_swp1 = amt_swp1 + EEPROM.read(36 + ((key_r - 1) * 7));
+      amt_ltr1 = amt_ltr1 + EEPROM.read(30 + ((key_r - 1) * 7));
+
       if (amt_o > 255) buffer1[5] = amt_o / 256;
       else  buffer1[5] = 0;
       buffer1[6] = amt_o % 256;
@@ -562,12 +560,16 @@ byte my_RFID_card()
         check = 5;
       }
 
-      //EEPROMWritelong(125, amt_swp);
-      //EEPROMWritelong(129, amt_ltr);
+      EEPROMWritelong(125, amt_swp);
+      EEPROMWritelong(129, amt_ltr);
 
-      //EEPROMWritelong(105, amt_swp1);
-      //EEPROMWritelong(109, amt_ltr1);
-
+      EEPROMWritelong(105, amt_swp1);
+      EEPROMWritelong(109, amt_ltr1);
+     
+      Serial.println(amt_swp);
+      Serial.println(amt_ltr);
+      Serial.println(amt_swp1);
+      Serial.println(amt_ltr1);
       A_amt = amt_o;
     }
     else
@@ -1184,6 +1186,11 @@ first_r :
   time_check = 0;
   key_r = 0;
   amt_o = 0;
+  digitalWrite(Buzzer, HIGH);
+  delay(250);
+  digitalWrite(Buzzer, LOW);
+  lcd.clear();
+  lcd.print(" recharge sucess");
   delay(1500);
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -1194,6 +1201,9 @@ first_r :
   lcd.write("Add Amount  : ");
   lcd.setCursor(0, 3);
   lcd.write("Recharge Mode Active");
+  delay(1500);
+
+
 
   while (1)
   {
@@ -1227,9 +1237,13 @@ first_r :
     delay(10);
     Reg_staus = RFID_card_write(1);
     if (Reg_staus == 1)
-      goto first_r;
-    if (Reg_staus == 2)
     {
+      delay(1500);
+      goto first_r;
+
+    }
+    if (Reg_staus == 2)
+    { lcd.print("recharge failed");
       delay(1000);
       goto first_r;
     }
@@ -1815,6 +1829,7 @@ void confg_volume()   //--------------------------------------------------- Edit
 void setup()
 {
   pinMode(17, OUTPUT);
+  // wdt_enable(WDTO_8S);
   digitalWrite(17, HIGH);
   //byte flag_eeprom = EEPROM.read(242);
   Wire.begin();
@@ -1857,8 +1872,7 @@ void setup()
 
   pinMode(T_SW_1, OUTPUT);
   digitalWrite(T_SW_1, HIGH);
-  pinMode(
-    T_SW_2, OUTPUT);
+  pinMode(T_SW_2, OUTPUT);
   digitalWrite(T_SW_2, HIGH);
   pinMode(BO_SW, OUTPUT);
   digitalWrite(BO_SW, LOW);
@@ -1868,17 +1882,8 @@ void setup()
   pinMode(sensorPin2, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(sensorPin1), pulseCounter1, FALLING);
   attachInterrupt(digitalPinToInterrupt(sensorPin2), pulseCounter2, FALLING);
+  home_screen();
 
-  lcd.begin(20, 4);
-  lcd.setCursor(0, 0);
-  lcd.write("     Welcome To");
-  lcd.setCursor(0, 1);
-  lcd.write("   GTR Solutions  ");
-  lcd.setCursor(0, 2);
-  lcd.print("Device ID:");
-  lcd.print(serial_num);
-  lcd.setCursor(0, 3);
-  delay(1000);
   if (GSM_Active)
   {
     lcd.setCursor(0, 3);
@@ -1935,7 +1940,8 @@ void loop()//-------------------------------------------------------------------
           }
 
         digitalWrite(BO_SW, LOW);
-        lcd.setCursor(0, 0);    lcd.write("     Touch CARD  ");
+        lcd.setCursor(0, 0);
+        lcd.write("     Touch CARD  ");
         if (GSM_Active)
         {
           lcd.setCursor(17, 0);
@@ -2135,12 +2141,31 @@ void loop()//-------------------------------------------------------------------
         current = millis();
         if (current >= interval)
         {
-          toggle();
+
+          /* lcd.clear();
+            lcd.setCursor(0, 0);
+            lcd.write("     Touch card");
+            lcd.begin(20, 4);
+            lcd.setCursor(0, 1);
+            lcd.write("     Welcome To");
+            lcd.setCursor(0, 2);
+            lcd.write("   GTR Solutions  ");
+            lcd.setCursor(0, 3);
+            lcd.print("Device ID:");
+            lcd.print(serial_num);
+            lcd.setCursor(0, 6);
+            lcd.setCursor(0, 0);
+            lcd.noCursor();
+            lcd.clear();*/
+          //menu();
+
+          resetFunc();
           timer0_millis = 0;
         }
         //Timer1.attachInterrupt(timer_check);
         //timer1(TIMER1_PRESCALER_1024, 7812U, toggle);
         //sei();
+
       }
       if (serial_menu_flag == 1)device_menu();
 
@@ -2233,7 +2258,23 @@ void loop()//-------------------------------------------------------------------
             current = millis();
             if (current >= interval)
             {
-              toggle();
+
+              /* lcd.clear();
+                lcd.setCursor(0, 0);
+                lcd.write("     Touch Card");
+                lcd.begin(20, 4);
+                lcd.setCursor(0, 1);
+                lcd.write("     Welcome To");
+                lcd.setCursor(0, 2);
+                lcd.write("   GTR Solutions  ");
+                lcd.setCursor(0, 3);
+                lcd.print("Device ID:");
+                lcd.print(serial_num);
+                lcd.setCursor(0, 6);
+                lcd.setCursor(0, 0);
+                lcd.noCursor();*/
+
+              resetFunc();
               timer0_millis = 0;
             }
 
@@ -2272,7 +2313,21 @@ void loop()//-------------------------------------------------------------------
       current = millis();
       if (current >= interval)
       {
-        toggle();
+        /* lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.write("     Touch Card");
+          lcd.begin(20, 4);
+          lcd.setCursor(0, 1);
+          lcd.write("     Welcome To");
+          lcd.setCursor(0, 2);
+          lcd.write("   GTR Solutions  ");
+          lcd.setCursor(0, 3);
+          lcd.print("Device ID:");
+          lcd.print(serial_num);
+          lcd.setCursor(0, 6);
+          lcd.setCursor(0, 0);
+          lcd.noCursor();*/
+        resetFunc();
         timer0_millis = 0;
       }
       //   Timer1.attachInterrupt(timer_check);
@@ -2307,6 +2362,7 @@ void device_menu() //-----------------------------------------------DEVICE ID CR
       serial_menu_flag = 0;
       // wdt_enable(WDTO_8S);
       //  Timer1.detachInterrupt();
+
       goto last;
     }
     if (enter_key())
@@ -2755,12 +2811,11 @@ void No_of_Taps() // -------------------------------------- No of cards --------
       total_taps--;
       time_check = 0;
     }
-    if (total_taps >= 4) total_taps = 1;
+    if (total_taps >= 5) total_taps = 1;
     if (back_key())
       goto end_ncard;
     if (time_check == 4)
       goto end_ncard;
-
   }
 
 end_ncard :
@@ -3153,11 +3208,20 @@ void toggle() {
   output = !output;
 }
 
-
-
-
 ISR (TIMER1_OVF_vect)    // Timer1 ISR
 {
   PORTD ^= (1 << LED);
   TCNT1 = 63974;   // for 1 sec at 16 MHz
+}
+void home_screen() {
+  lcd.begin(20, 4);
+  lcd.setCursor(0, 0);
+  lcd.write("     Welcome To");
+  lcd.setCursor(0, 1);
+  lcd.write("   GTR Solutions  ");
+  lcd.setCursor(0, 2);
+  lcd.print("Device ID:");
+  lcd.print(serial_num);
+  lcd.setCursor(0, 3);
+
 }
